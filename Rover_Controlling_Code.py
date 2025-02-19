@@ -1,64 +1,83 @@
-import keyboard
 import time
+import curses
 from adafruit_motorkit import MotorKit
 
 # Initialize the motor hat
-#kit = MotorKit()
+kit = MotorKit()
 
 # Configuration
 MAX_SPEED = 1.0  # Maximum throttle (range: 0 to 1)
-ACCELERATION_STEP = 0.01  # How fast it speeds up
-DECELERATION_STEP = 0.05  # How fast it slows down
-UPDATE_RATE = 0.01  # Update interval (lower = smoother, higher = more responsive)
+ACCELERATION_STEP = 0.05  # How fast it speeds up
+DECELERATION_STEP = 0.1  # Ensure both motors decelerate at the same rate
+UPDATE_RATE = 0.05  # Update interval (lower = smoother, higher = more responsive)
 
 # Current speed levels
 motor1_speed = 0.0
 motor2_speed = 0.0
 
-print("Use arrow keys to control motors smoothly. Press 'esc' to exit.")
+def motor_control(stdscr):
+    global motor1_speed, motor2_speed
+    curses.cbreak()
+    curses.halfdelay(1)  # Reduce delay for key holds (1 = 100ms)
+    stdscr.nodelay(True)  # Do not block waiting for user input
+    stdscr.keypad(True)
+    stdscr.clear()
+    stdscr.addstr("Use arrow keys to control motors. Press 'q' to exit.\n")
 
-while True:
-    # Determine target speed for Motor 1 (Up/Down arrows)
-    if keyboard.is_pressed("up"):
-        target_speed_m1 = MAX_SPEED
-    elif keyboard.is_pressed("down"):
-        target_speed_m1 = -MAX_SPEED
-    else:
-        target_speed_m1 = 0
+    while True:
+        key = stdscr.getch()
 
-    # Determine target speed for Motor 2 (Left/Right arrows)
-    if keyboard.is_pressed("left"):
-        target_speed_m2 = MAX_SPEED
-    elif keyboard.is_pressed("right"):
-        target_speed_m2 = -MAX_SPEED
-    else:
-        target_speed_m2 = 0
+        # Determine target speeds
+        if key == curses.KEY_UP:
+            target_speed_m1 = MAX_SPEED
+            target_speed_m2 = -MAX_SPEED
+        elif key == curses.KEY_DOWN:
+            target_speed_m1 = -MAX_SPEED
+            target_speed_m2 = MAX_SPEED
+        elif key == curses.KEY_LEFT:
+            target_speed_m1 = MAX_SPEED
+            target_speed_m2 = MAX_SPEED
+        elif key == curses.KEY_RIGHT:
+            target_speed_m1 = -MAX_SPEED
+            target_speed_m2 = -MAX_SPEED
+        else:
+            target_speed_m1 = 0
+            target_speed_m2 = 0
 
-    # Gradually adjust Motor 1 speed
-    if motor1_speed < target_speed_m1:
-        motor1_speed = min(motor1_speed + ACCELERATION_STEP, target_speed_m1)
-    elif motor1_speed > target_speed_m1:
-        motor1_speed = max(motor1_speed - DECELERATION_STEP, target_speed_m1)
+        # Apply the same acceleration and deceleration logic to both motors
+        for i, (current_speed, target_speed) in enumerate([(motor1_speed, target_speed_m1), (motor2_speed, target_speed_m2)]):
+            if current_speed < target_speed:
+                current_speed = min(current_speed + ACCELERATION_STEP, target_speed)
+            elif current_speed > target_speed:
+                current_speed = max(current_speed - DECELERATION_STEP, target_speed)
+            if i == 0:
+                motor1_speed = current_speed
+            else:
+                motor2_speed = current_speed
 
-    # Gradually adjust Motor 2 speed
-    if motor2_speed < target_speed_m2:
-        motor2_speed = min(motor2_speed + ACCELERATION_STEP, target_speed_m2)
-    elif motor2_speed > target_speed_m2:
-        motor2_speed = max(motor2_speed - DECELERATION_STEP, target_speed_m2)
+        motor1_speed = round(motor1_speed, 3)
+        motor2_speed = round(motor2_speed, 3)
 
-    motor1_speed = round(motor1_speed, 3)
-    motor2_speed = round(motor2_speed, 3)
+        # Apply the speeds to the motors
+        kit.motor1.throttle = motor1_speed
+        kit.motor2.throttle = motor2_speed
 
-    # Apply the speeds to the motors
-    kit.motor1.throttle = motor1_speed
-    kit.motor2.throttle = motor2_speed
+        # Display status
+        stdscr.clear()
+        stdscr.addstr("Use arrow keys to control motors. Press 'q' to exit.\n")
+        stdscr.addstr(f"Motor 1 Speed: {motor1_speed}\n")
+        stdscr.addstr(f"Motor 2 Speed: {motor2_speed}\n")
+        stdscr.refresh()
 
-    # Exit on 'esc' key
-    if keyboard.is_pressed("esc"):
-        break
+        # Exit on 'q' key
+        if key == ord('q'):
+            break
 
-    time.sleep(UPDATE_RATE)  # Adjusts update rate for smoother response
+        time.sleep(UPDATE_RATE)
 
-# Ensure motors fully stop when exiting
-kit.motor1.throttle = 0
-kit.motor2.throttle = 0
+    # Ensure motors fully stop when exiting
+    kit.motor1.throttle = 0
+    kit.motor2.throttle = 0
+
+if __name__ == "__main__":
+    curses.wrapper(motor_control)
