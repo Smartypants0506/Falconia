@@ -2,73 +2,84 @@ import time
 import math
 from adafruit_motorkit import MotorKit
 
-# Motor setup
 kit = MotorKit()
 
-# Constants
-TIME_PER_360 = 4.0  # Time (s) for 360-degree turn TODO CALCULATE TS
+TIME_PER_360 = 4.0  # TODO CALCULATE TS
 DEGREES_PER_SECOND = 360.0 / TIME_PER_360
-ANGLE_TOLERANCE = 5.0  # Degrees
-POSITION_TOLERANCE = 1.0  # Inches
-KP_STEERING = 0.5  # Steering proportional gain
-TIME_PER_FOOT = 2.0  # Time (s) to move 1 foot (12 inches) TODO CALCULATE TS
-SPEED = 0.5  # Base motor speed (0 to 1)
+ANGLE_TOLERANCE = 5.0
+POSITION_TOLERANCE = 1.0
+KP_STEERING = 0.5
+TIME_PER_FOOT = 2.0  # TODO CALCULATE TS
+SPEED = 0.5
 
-# Target waypoints (x, y) in inches
-targets = [(50, 50), (30, 80), (90, 120)] #TODO MAKE TS UP
-current_pos = (0, 0)  # Initial position (top-left corner) #TODO ESTIMATE TS
+#  TODO CHECK TS
+MAP_WIDTH_INCHES = 94
+MAP_HEIGHT_INCHES = 143
+IMAGE_WIDTH_PIXELS = 300
+IMAGE_HEIGHT_PIXELS = 500
 
-# Constants for map and image dimensions TODO CHECK TS
-MAP_WIDTH_INCHES = 94  # Map width in inches
-MAP_HEIGHT_INCHES = 143  # Map height in inches
-IMAGE_WIDTH_PIXELS = 300  # Image width in pixels
-IMAGE_HEIGHT_PIXELS = 500  # Image height in pixels
+targets = [(50, 50), (30, 80), (90, 120)]  # TODO MAKE TS UP
+current_pos = (0, 0)  # TODO ESTIMATE TS
 
-# Known corners of the map in pixels (from the website) TODO AQUIRE TS
-TOP_LEFT_PIXEL = (243, 359)  # Pixel corresponding to (0, 0) on the map
-TOP_RIGHT_PIXEL = (543, 359)  # Pixel corresponding to (94, 0) on the map
-BOTTOM_LEFT_PIXEL = (243, 859)  # Pixel corresponding to (0, 143) on the map
-BOTTOM_RIGHT_PIXEL = (543, 859)  # Pixel corresponding to (94, 143) on the map
+# TODO AQUIRE TS
+TOP_LEFT_PIXEL = (243, 359)
+TOP_RIGHT_PIXEL = (543, 359)
+BOTTOM_LEFT_PIXEL = (243, 859)
+BOTTOM_RIGHT_PIXEL = (543, 859)
 
-def get_current_pixel(): # TODO HIT UP ESTEP
-    # Replace with actual code to fetch the current pixel from the website
-    # For now, return a simulated pixel (e.g., the middle of the map)
-    return (393, 609)  # Example pixel
+current_direction = (0.0, 1.0)
+
+def create_vector(angle_degrees, magnitude):
+    angle_radians = math.radians(angle_degrees)
+    return (magnitude * math.cos(angle_radians), magnitude * math.sin(angle_radians))
+
+def get_angle_and_magnitude(vector):
+    x, y = vector
+    magnitude = math.hypot(x, y)
+    angle_degrees = math.atan2(y, x) * 180 / math.pi
+    return angle_degrees, magnitude
+
+def add_vectors(v1, v2):
+    return (v1[0] + v2[0], v1[1] + v2[1])
+
+def subtract_vectors(v1, v2):
+    return (v1[0] - v2[0], v1[1] - v2[1])
+
+def scale_vector(vector, scalar):
+    return (vector[0] * scalar, vector[1] * scalar)
+
+def get_current_pixel():  # TODO HIT UP ESTEP
+    return (393, 609)
 
 def update_position():
     global current_pos
 
-    # Get the current pixel from the website
     current_pixel = get_current_pixel()
     pixel_x, pixel_y = current_pixel
 
-    # Calculate scaling factors (inches per pixel)
     scale_x = MAP_WIDTH_INCHES / (TOP_RIGHT_PIXEL[0] - TOP_LEFT_PIXEL[0])
     scale_y = MAP_HEIGHT_INCHES / (BOTTOM_LEFT_PIXEL[1] - TOP_LEFT_PIXEL[1])
 
-    # Calculate the position in inches from the top-left corner of the map
     x_inches = (pixel_x - TOP_LEFT_PIXEL[0]) * scale_x
     y_inches = (pixel_y - TOP_LEFT_PIXEL[1]) * scale_y
 
-    # Update the rover's current position
     current_pos = (x_inches, y_inches)
 
-# Helper function to calculate angle between two points
-def calculate_angle(x1, y1, x2, y2):
-    return math.atan2(y2 - y1, x2 - x1) * 180 / math.pi
-
-# Helper function to move forward a specific distance
 def move_forward(distance_inches):
+    global current_pos, current_direction
     time_to_move = (distance_inches / 12.0) * TIME_PER_FOOT
     kit.motor1.throttle = SPEED
     kit.motor2.throttle = SPEED
     time.sleep(time_to_move)
     kit.motor1.throttle = 0
     kit.motor2.throttle = 0
-    update_position()  # Update position after moving
 
-# Helper function to turn a specific angle (in degrees)
+    displacement = scale_vector(current_direction, distance_inches)
+    current_pos = add_vectors(current_pos, displacement)
+    update_position()
+
 def turn_angle(angle_degrees):
+    global current_direction
     turn_time = abs(angle_degrees) / DEGREES_PER_SECOND
     if angle_degrees > 0:
         kit.motor1.throttle = SPEED
@@ -80,17 +91,16 @@ def turn_angle(angle_degrees):
     kit.motor1.throttle = 0
     kit.motor2.throttle = 0
 
-# Turn handling with feedback loop
+    current_angle, magnitude = get_angle_and_magnitude(current_direction)
+    new_angle = current_angle + angle_degrees
+    current_direction = create_vector(new_angle, magnitude)
+
 def adjust_heading(target_angle):
-    global current_pos
+    global current_direction
     while True:
-        # Get current direction by moving forward slightly
-        start_pos = current_pos
-        move_forward(3)  # Move 6 inches to establish direction
-        current_angle = calculate_angle(start_pos[0], start_pos[1], current_pos[0], current_pos[1])
+        current_angle, _ = get_angle_and_magnitude(current_direction)
         angle_error = target_angle - current_angle
 
-        # Normalize angle error
         if angle_error > 180:
             angle_error -= 360
         elif angle_error < -180:
@@ -99,29 +109,21 @@ def adjust_heading(target_angle):
         if abs(angle_error) <= ANGLE_TOLERANCE:
             break
 
-        # Turn to correct angle
         turn_angle(angle_error)
 
-# PID-controlled movement to target
 def move_to_target(target):
-    global current_pos
+    global current_pos, current_direction
     while True:
         update_position()
-        dx = target[0] - current_pos[0]
-        dy = target[1] - current_pos[1]
-        distance = math.hypot(dx, dy)
+        target_vector = subtract_vectors(target, current_pos)
+        distance = get_angle_and_magnitude(target_vector)[1]
 
         if distance <= POSITION_TOLERANCE:
             break
 
-        desired_angle = calculate_angle(current_pos[0], current_pos[1], target[0], target[1])
+        desired_angle, _ = get_angle_and_magnitude(target_vector)
 
-        # Get current movement angle
-        prev_pos = current_pos
-        move_forward(2)  # Move 6 inches to establish direction
-        current_angle = calculate_angle(prev_pos[0], prev_pos[1], current_pos[0], current_pos[1])
-
-        # Calculate steering adjustment
+        current_angle, _ = get_angle_and_magnitude(current_direction)
         angle_error = desired_angle - current_angle
         if angle_error > 180:
             angle_error -= 360
@@ -129,9 +131,8 @@ def move_to_target(target):
             angle_error += 360
 
         steering = KP_STEERING * angle_error
-        steering = max(-1, min(1, steering))  # Constrain steering to [-1, 1]
+        steering = max(-1, min(1, steering))
 
-        # Apply steering
         kit.motor1.throttle = SPEED + steering
         kit.motor2.throttle = SPEED - steering
         time.sleep(0.1)
@@ -139,19 +140,18 @@ def move_to_target(target):
     kit.motor1.throttle = 0
     kit.motor2.throttle = 0
 
-# Main navigation loop
 def main():
-    global current_pos
-    update_position()  # Get initial position
+    global current_pos, current_direction
+    update_position()
 
-    # Establish initial direction
-    #initial_pos = current_pos
-    # move_forward(3)  # Move 2 feet to establish initial direction
-    # initial_angle = calculate_angle(initial_pos[0], initial_pos[1], current_pos[0], current_pos[1])
+    initial_pos = current_pos
+    move_forward(3)
+    displacement = subtract_vectors(current_pos, initial_pos)
+    current_direction = create_vector(get_angle_and_magnitude(displacement)[0], 1.0)
 
-    # Navigate through targets
     for target in targets:
-        target_angle = calculate_angle(current_pos[0], current_pos[1], target[0], target[1])
+        target_vector = subtract_vectors(target, current_pos)
+        target_angle, _ = get_angle_and_magnitude(target_vector)
         adjust_heading(target_angle)
         move_to_target(target)
 
