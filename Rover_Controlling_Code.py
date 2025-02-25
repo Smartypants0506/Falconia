@@ -8,7 +8,7 @@ kit = MotorKit()
 # Configuration
 MAX_SPEED = 1.0  # Maximum throttle (range: 0 to 1)
 ACCELERATION_STEP = 0.05  # How fast it speeds up
-DECELERATION_STEP = 0.1  # Ensure both motors decelerate at the same rate
+DECELERATION_STEP = 0.05  # Ensure both motors decelerate at the same rate
 UPDATE_RATE = 0.05  # Update interval (lower = smoother, higher = more responsive)
 
 # Current speed levels
@@ -29,38 +29,30 @@ def motor_control(stdscr):
 
         # Determine target speeds
         if key == curses.KEY_UP:
-            target_speed_m1 = MAX_SPEED
-            target_speed_m2 = -MAX_SPEED
+            kit.motor1.throttle = 0.75
+            kit.motor2.throttle = 0.75
+            motor1_speed = 0.75
+            motor2_speed = 0.75
         elif key == curses.KEY_DOWN:
-            target_speed_m1 = -MAX_SPEED
-            target_speed_m2 = MAX_SPEED
+            kit.motor1.throttle = -0.75
+            kit.motor2.throttle = -0.75
+            motor1_speed = -0.75
+            motor2_speed = -0.75
         elif key == curses.KEY_LEFT:
-            target_speed_m1 = MAX_SPEED
-            target_speed_m2 = MAX_SPEED
+            kit.motor1.throttle = 1
+            kit.motor2.throttle = -1
+            motor1_speed = 1
+            motor2_speed = -1
         elif key == curses.KEY_RIGHT:
-            target_speed_m1 = -MAX_SPEED
-            target_speed_m2 = -MAX_SPEED
+            kit.motor1.throttle = -1
+            kit.motor2.throttle = 1
+            motor1_speed = -1
+            motor2_speed = 1
         else:
-            target_speed_m1 = 0
-            target_speed_m2 = 0
-
-        # Apply the same acceleration and deceleration logic to both motors
-        for i, (current_speed, target_speed) in enumerate([(motor1_speed, target_speed_m1), (motor2_speed, target_speed_m2)]):
-            if current_speed < target_speed:
-                current_speed = min(current_speed + ACCELERATION_STEP, target_speed)
-            elif current_speed > target_speed:
-                current_speed = max(current_speed - DECELERATION_STEP, target_speed)
-            if i == 0:
-                motor1_speed = current_speed
-            else:
-                motor2_speed = current_speed
-
-        motor1_speed = round(motor1_speed, 3)
-        motor2_speed = round(motor2_speed, 3)
-
-        # Apply the speeds to the motors
-        kit.motor1.throttle = motor1_speed
-        kit.motor2.throttle = motor2_speed
+            kit.motor1.throttle = 0
+            kit.motor2.throttle = 0
+            motor1_speed = 0
+            motor2_speed = 0
 
         # Display status
         stdscr.clear()

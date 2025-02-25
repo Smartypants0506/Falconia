@@ -2,6 +2,7 @@ from flask import Flask, render_template_string
 import cv2
 import numpy as np
 import threading
+import time
 
 app = Flask(__name__)
 
@@ -13,24 +14,30 @@ y_coord = 0
 def process_video_stream():
     global x_coord, y_coord
 
-    # Initialize video capture (replace 0 with your video source if needed)
     cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640 * 2)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480 * 2)
+    failure_count = 0  # Counter for consecutive frame failures
+    max_failures = 10  # Max consecutive failures before exiting
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            break
+            failure_count += 1
+            print(f"Warning: Unable to read frame ({failure_count}/{max_failures})")
+            if failure_count >= max_failures:
+                print("Error: Maximum frame read failures reached. Exiting video thread.")
+                break
+            time.sleep(0.1)  # Short delay before retrying
+            continue
+        failure_count = 0  # Reset failure count after a successful read
 
         # Convert the frame to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Find the brightest pixel
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(gray)
+        _, _, _, max_loc = cv2.minMaxLoc(gray)
         x_coord, y_coord = max_loc  # Coordinates of the brightest pixel
-
-        # Break the loop if 'q' is pressed
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
 
     cap.release()
     cv2.destroyAllWindows()
@@ -49,10 +56,9 @@ def index():
         <body>
             <p>{{ x }}, {{ y }}</p>
             <script>
-                // Refresh the page every second to update the coordinates
                 setTimeout(function() {
                     window.location.reload();
-                }, 1000);
+                }, 3000);
             </script>
         </body>
         </html>
@@ -63,10 +69,6 @@ def run_flask():
     app.run(host='0.0.0.0', port=8080)
 
 if __name__ == '__main__':
-    # Start the video processing in a separate thread
-    video_thread = threading.Thread(target=process_video_stream)
-    video_thread.daemon = True
+    video_thread = threading.Thread(target=process_video_stream, daemon=True)
     video_thread.start()
-
-    # Start the Flask server
     run_flask()
