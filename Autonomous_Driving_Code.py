@@ -1,22 +1,18 @@
 import time
 import math
-from adafruit_motorkit import MotorKit
+#from adafruit_motorkit import MotorKit
+import requests
+from bs4 import BeautifulSoup
 
-kit = MotorKit()
+#kit = MotorKit() # TODO MAY HAVE TO ADJUST MOVEMENT
 
 TIME_PER_360 = 4.0  # TODO CALCULATE TS
 DEGREES_PER_SECOND = 360.0 / TIME_PER_360
 ANGLE_TOLERANCE = 5.0
-POSITION_TOLERANCE = 1.0
+POSITION_TOLERANCE = 5.0 #TODO ADJUST AS NECESARY
 KP_STEERING = 0.5
-TIME_PER_FOOT = 2.0  # TODO CALCULATE TS
-SPEED = 0.5
-
-#  TODO CHECK TS
-MAP_WIDTH_INCHES = 94
-MAP_HEIGHT_INCHES = 143
-IMAGE_WIDTH_PIXELS = 300
-IMAGE_HEIGHT_PIXELS = 500
+TIME_PER_FOOT = 0.54
+SPEED = 0.75
 
 targets = [(50, 50), (30, 80), (90, 120)]  # TODO MAKE TS UP
 current_pos = (0, 0)  # TODO ESTIMATE TS
@@ -48,31 +44,43 @@ def subtract_vectors(v1, v2):
 def scale_vector(vector, scalar):
     return (vector[0] * scalar, vector[1] * scalar)
 
-def get_current_pixel():  # TODO HIT UP ESTEP
-    return (393, 609)
-
 def update_position():
     global current_pos
 
-    current_pixel = get_current_pixel()
-    pixel_x, pixel_y = current_pixel
-
-    scale_x = MAP_WIDTH_INCHES / (TOP_RIGHT_PIXEL[0] - TOP_LEFT_PIXEL[0])
-    scale_y = MAP_HEIGHT_INCHES / (BOTTOM_LEFT_PIXEL[1] - TOP_LEFT_PIXEL[1])
-
-    x_inches = (pixel_x - TOP_LEFT_PIXEL[0]) * scale_x
-    y_inches = (pixel_y - TOP_LEFT_PIXEL[1]) * scale_y
-
-    current_pos = (x_inches, y_inches)
+    # Fetch the HTML content of the website
+    response = requests.get('http://192.168.86.20:8080')  # Replace with the actual URL of your website
+    if response.status_code != 200:
+        print("Failed to fetch coordinates from the website.")
+        return
+    # Parse the HTML content
+    soup = BeautifulSoup(response.text, 'html.parser')
+    # Find the <p> tag containing the coordinates
+    p_tag = soup.find('p')
+    if not p_tag:
+        print("Coordinates not found in the HTML.")
+        return
+    # Extract the coordinates from the <p> tag
+    coordinates = p_tag.text.strip().split(',')
+    if len(coordinates) != 2:
+        print("Invalid coordinate format.")
+        return
+    # Update the current position
+    try:
+        x = float(coordinates[0])
+        y = float(coordinates[1])
+        current_pos = (x, y)
+    except ValueError:
+        print("Failed to parse coordinates.")
+    print(current_pos)
 
 def move_forward(distance_inches):
     global current_pos, current_direction
-    time_to_move = (distance_inches / 12.0) * TIME_PER_FOOT
-    kit.motor1.throttle = SPEED
-    kit.motor2.throttle = SPEED
+    time_to_move = distance_inches * (TIME_PER_FOOT / 12)
+    #kit.motor1.throttle = SPEED
+    #kit.motor2.throttle = -SPEED
     time.sleep(time_to_move)
-    kit.motor1.throttle = 0
-    kit.motor2.throttle = 0
+    #kit.motor1.throttle = 0
+    #kit.motor2.throttle = 0
 
     displacement = scale_vector(current_direction, distance_inches)
     current_pos = add_vectors(current_pos, displacement)
@@ -82,14 +90,16 @@ def turn_angle(angle_degrees):
     global current_direction
     turn_time = abs(angle_degrees) / DEGREES_PER_SECOND
     if angle_degrees > 0:
-        kit.motor1.throttle = SPEED
-        kit.motor2.throttle = -SPEED
+        pass
+        #kit.motor1.throttle = SPEED
+        #kit.motor2.throttle = SPEED
     else:
-        kit.motor1.throttle = -SPEED
-        kit.motor2.throttle = SPEED
+        pass
+        #kit.motor1.throttle = -SPEED
+        #kit.motor2.throttle = -SPEED
     time.sleep(turn_time)
-    kit.motor1.throttle = 0
-    kit.motor2.throttle = 0
+    #kit.motor1.throttle = 0
+    #kit.motor2.throttle = 0
 
     current_angle, magnitude = get_angle_and_magnitude(current_direction)
     new_angle = current_angle + angle_degrees
@@ -123,29 +133,17 @@ def move_to_target(target):
 
         desired_angle, _ = get_angle_and_magnitude(target_vector)
 
-        current_angle, _ = get_angle_and_magnitude(current_direction)
-        angle_error = desired_angle - current_angle
-        if angle_error > 180:
-            angle_error -= 360
-        elif angle_error < -180:
-            angle_error += 360
+        adjust_heading(desired_angle)
 
-        steering = KP_STEERING * angle_error
-        steering = max(-1, min(1, steering))
-
-        kit.motor1.throttle = SPEED + steering
-        kit.motor2.throttle = SPEED - steering
-        time.sleep(0.1)
-
-    kit.motor1.throttle = 0
-    kit.motor2.throttle = 0
+    #kit.motor1.throttle = 0
+    #kit.motor2.throttle = 0
 
 def main():
     global current_pos, current_direction
     update_position()
 
     initial_pos = current_pos
-    move_forward(3)
+    move_forward(5) # TODO CHECK TS
     displacement = subtract_vectors(current_pos, initial_pos)
     current_direction = create_vector(get_angle_and_magnitude(displacement)[0], 1.0)
 
@@ -154,6 +152,7 @@ def main():
         target_angle, _ = get_angle_and_magnitude(target_vector)
         adjust_heading(target_angle)
         move_to_target(target)
+
 
 if __name__ == "__main__":
     main()
