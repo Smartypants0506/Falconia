@@ -1,10 +1,10 @@
 import time
 import math
-#from adafruit_motorkit import MotorKit
+from adafruit_motorkit import MotorKit
 import requests
 from bs4 import BeautifulSoup
 
-#kit = MotorKit() # TODO MAY HAVE TO ADJUST MOVEMENT
+kit = MotorKit() # TODO MAY HAVE TO ADJUST MOVEMENT
 
 TIME_PER_360 = 4.0  # TODO CALCULATE TS
 DEGREES_PER_SECOND = 360.0 / TIME_PER_360
@@ -76,11 +76,11 @@ def update_position():
 def move_forward(distance_inches):
     global current_pos, current_direction
     time_to_move = distance_inches * (TIME_PER_FOOT / 12)
-    #kit.motor1.throttle = SPEED
-    #kit.motor2.throttle = -SPEED
+    kit.motor1.throttle = SPEED
+    kit.motor2.throttle = -SPEED
     time.sleep(time_to_move)
-    #kit.motor1.throttle = 0
-    #kit.motor2.throttle = 0
+    kit.motor1.throttle = 0
+    kit.motor2.throttle = 0
 
     displacement = scale_vector(current_direction, distance_inches)
     current_pos = add_vectors(current_pos, displacement)
@@ -90,16 +90,14 @@ def turn_angle(angle_degrees):
     global current_direction
     turn_time = abs(angle_degrees) / DEGREES_PER_SECOND
     if angle_degrees > 0:
-        pass
-        #kit.motor1.throttle = SPEED
-        #kit.motor2.throttle = SPEED
+        kit.motor1.throttle = SPEED
+        kit.motor2.throttle = SPEED
     else:
-        pass
-        #kit.motor1.throttle = -SPEED
-        #kit.motor2.throttle = -SPEED
+        kit.motor1.throttle = -SPEED
+        kit.motor2.throttle = -SPEED
     time.sleep(turn_time)
-    #kit.motor1.throttle = 0
-    #kit.motor2.throttle = 0
+    kit.motor1.throttle = 0
+    kit.motor2.throttle = 0
 
     current_angle, magnitude = get_angle_and_magnitude(current_direction)
     new_angle = current_angle + angle_degrees
@@ -135,8 +133,8 @@ def move_to_target(target):
 
         adjust_heading(desired_angle)
 
-    #kit.motor1.throttle = 0
-    #kit.motor2.throttle = 0
+    kit.motor1.throttle = 0
+    kit.motor2.throttle = 0
 
 def main():
     global current_pos, current_direction
