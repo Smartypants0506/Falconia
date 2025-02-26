@@ -1,0 +1,244 @@
+1. Calibrating the Perspective Transform
+
+The perspective transform maps pixel coordinates from the camera to real-world coordinates. To calibrate it:
+Steps:
+
+    Place Markers:
+
+        Place physical markers at known real-world coordinates on the map (e.g., at the corners and center).
+
+        For example, place markers at (0, 0), (MAP_WIDTH_INCHES, 0), (0, MAP_HEIGHT_INCHES), and (MAP_WIDTH_INCHES, MAP_HEIGHT_INCHES).
+
+    Capture Pixel Coordinates:
+
+        Use the camera to detect the pixel coordinates of these markers.
+
+        Update the pixel_corners array in the code with these values.
+
+    Verify Accuracy:
+
+        Move the rover to known positions and compare the real-world coordinates calculated by the perspective transform with the actual positions.
+
+        Adjust the pixel_corners values if there are discrepancies.
+
+Example:
+python
+Copy
+
+# After placing markers and capturing their pixel coordinates:
+pixel_corners = np.array([
+    [58, 469],  # Top-left marker
+    [58, 23],   # Top-right marker
+    [760, 469], # Bottom-left marker
+    [760, 23]   # Bottom-right marker
+], dtype=np.float32)
+
+# Recalculate the perspective transform matrix
+M = cv2.getPerspectiveTransform(pixel_corners, real_corners)
+
+2. Calibrating the PID Controller
+
+The PID controller ensures smooth and accurate turning. To calibrate it:
+Steps:
+
+    Set Initial Gains:
+
+        Start with Kp = 1.0, Ki = 0.0, and Kd = 0.0.
+
+    Test Turning:
+
+        Command the rover to turn 90 degrees and observe its behavior.
+
+        If it overshoots, reduce Kp. If it undershoots, increase Kp.
+
+    Add Integral and Derivative Terms:
+
+        If the rover oscillates around the target angle, introduce a small Kd (e.g., 0.05).
+
+        If there’s a steady-state error (e.g., it stops slightly before the target), introduce a small Ki (e.g., 0.1).
+
+    Repeat and Fine-Tune:
+
+        Test with different angles (e.g., 45°, 180°) and adjust the gains until the rover turns accurately and smoothly.
+
+Example:
+python
+Copy
+
+# Adjust PID gains based on observed behavior
+pid_steering = PIDController(
+    Kp=1.0,  # Proportional gain
+    Ki=0.1,  # Integral gain
+    Kd=0.05, # Derivative gain
+    sample_time=0.1,
+    output_limits=(-1, 1)
+)
+
+3. Calibrating Motor Speed and Timing
+
+The rover’s movement depends on motor speed and timing. To calibrate it:
+Steps:
+
+    Measure Travel Time:
+
+        Command the rover to move forward for a fixed duration (e.g., 1 second) and measure the distance traveled.
+
+        Adjust SPEED and TIME_PER_FOOT until the rover moves the expected distance.
+
+    Test Turning Time:
+
+        Command the rover to perform a 360-degree turn and measure the time taken.
+
+        Adjust TIME_PER_360 to match the measured time.
+
+Example:
+python
+Copy
+
+# Adjust motor speed and timing constants
+SPEED = 0.75  # Motor speed (0 to 1)
+TIME_PER_FOOT = 0.54  # Time to travel 1 foot (seconds)
+TIME_PER_360 = 1.6  # Time for a full 360-degree turn (seconds)
+
+4. Calibrating the Camera’s Brightness Threshold
+
+The camera detects the rover by finding the brightest pixel. To calibrate it:
+Steps:
+
+    Adjust Lighting:
+
+        Ensure the flashlight on the rover is the brightest light source in the environment.
+
+        Minimize other light sources or reflections.
+
+    Test Detection:
+
+        Move the rover around and verify that the camera consistently detects the brightest pixel as the rover’s position.
+
+        If detection is inconsistent, adjust the camera’s exposure settings or add a filter to the flashlight.
+
+Example:
+python
+Copy
+
+# Example of adjusting camera settings (if supported by your camera API)
+camera.set_exposure(0.1)  # Reduce exposure to highlight the flashlight
+
+5. Calibrating the Direction Vector
+
+The direction vector (current_direction) represents the rover’s heading. To calibrate it:
+Steps:
+
+    Initial Alignment:
+
+        Place the rover at a known starting position and align it with a reference direction (e.g., facing the positive Y-axis).
+
+    Test Movement:
+
+        Move the rover forward and compare its actual displacement with the expected displacement.
+
+        Use the update_direction_using_displacement function to correct the direction vector.
+
+    Verify Turns:
+
+        Command the rover to turn 90 degrees and verify that the direction vector updates correctly.
+
+Example:
+python
+Copy
+
+# After moving, update the direction vector
+old_pos = (0, 0)
+new_pos = get_current_pixel()
+update_direction_using_displacement(old_pos, new_pos)
+
+6. Calibrating Position Tolerance
+
+The position tolerance (POSITION_TOLERANCE) determines how close the rover needs to be to a target before stopping. To calibrate it:
+Steps:
+
+    Set Initial Tolerance:
+
+        Start with a conservative value (e.g., POSITION_TOLERANCE = 3.0 inches).
+
+    Test Movement:
+
+        Command the rover to move to a target and observe its stopping behavior.
+
+        If it stops too early, reduce the tolerance. If it overshoots, increase the tolerance.
+
+Example:
+python
+Copy
+
+# Adjust position tolerance
+POSITION_TOLERANCE = 3.0  # Tolerance in inches
+
+7. Calibrating Angle Tolerance
+
+The angle tolerance (ANGLE_TOLERANCE) determines how accurately the rover aligns with the target heading. To calibrate it:
+Steps:
+
+    Set Initial Tolerance:
+
+        Start with ANGLE_TOLERANCE = 15.0 degrees.
+
+    Test Turning:
+
+        Command the rover to turn to a target angle and observe its alignment.
+
+        If it oscillates or takes too long to align, adjust the tolerance.
+
+Example:
+python
+Copy
+
+# Adjust angle tolerance
+ANGLE_TOLERANCE = 15.0  # Tolerance in degrees
+
+8. Full System Calibration Routine
+
+Once individual components are calibrated, run a full system calibration:
+Steps:
+
+    Place the Rover:
+
+        Start the rover at (0, 0) facing the positive Y-axis.
+
+    Test Movement:
+
+        Command the rover to move to a series of known targets (e.g., (10, 10), (20, 20)).
+
+        Measure the actual positions and compare them with the expected positions.
+
+    Adjust Parameters:
+
+        Fine-tune PID gains, motor speed, and tolerances based on the results.
+
+Example:
+python
+Copy
+
+# Full system calibration targets
+calibration_targets = [(10, 10), (20, 20), (30, 30), (40, 40)]
+
+for target in calibration_targets:
+    print(f"Calibrating movement to {target}")
+    move_to_target(target)
+    time.sleep(1)
+
+Summary of Calibration Steps:
+
+    Perspective Transform: Use known markers to map pixel coordinates to real-world coordinates.
+
+    PID Controller: Adjust Kp, Ki, and Kd for smooth and accurate turning.
+
+    Motor Speed and Timing: Measure and adjust SPEED, TIME_PER_FOOT, and TIME_PER_360.
+
+    Camera Detection: Ensure the flashlight is consistently detected as the brightest pixel.
+
+    Direction Vector: Use displacement to correct the rover’s heading.
+
+    Position and Angle Tolerances: Adjust tolerances for precise movement and alignment.
+
+By following these steps, you can ensure your rover operates accurately and reliably in its environment.
