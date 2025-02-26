@@ -19,15 +19,13 @@ TIME_PER_FOOT = 0.54  # Time to travel 1 foot (seconds)
 SPEED = 0.75  # Motor speed (0 to 1)
 
 # Map dimensions (inches)
-MAP_WIDTH_INCHES = 90
-MAP_HEIGHT_INCHES = 140
+MAP_WIDTH_INCHES = 142
+MAP_HEIGHT_INCHES = 92
 
-# Target coordinates (inches)
-targets = [(35, 80), (50, 80), (90, 80), (120, 80), (140, 80), (160, 80), (180, 55), (210, 42), (250, 55), (275, 85),
-           (295, 80)]
+targets = [(14.5, 16), (16.5, 16), (19.5, 16), (22.5, 16), (34, 16), (38, 10.5), (46, 7.8), (53, 12), (59, 13.5), (60.5, 18.5)]
+current_pos = (9.7, 12.5)
 
-# Current position and direction
-current_pos = (0, 0)
+
 current_direction = (0.0, 1.0)  # Initial direction vector (facing positive Y-axis)
 
 # Camera pixel coordinates of map corners
@@ -103,7 +101,7 @@ class PIDController:
         return output
 
 
-# Initialize PID for steering
+# Initialize PID for steering TODO TUNE
 pid_steering = PIDController(
     Kp=1.0,
     Ki=0.1,
