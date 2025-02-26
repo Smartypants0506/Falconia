@@ -10,29 +10,26 @@ from adafruit_motorkit import MotorKit
 kit = MotorKit()
 
 # Constants
-TIME_PER_360 = 1.6  # Time for a full 360-degree turn (seconds)
+TIME_PER_360 = 1.6
 DEGREES_PER_SECOND = 360.0 / TIME_PER_360
-ANGLE_TOLERANCE = 15.0  # Tolerance for angle alignment (degrees)
-POSITION_TOLERANCE = 3.0  # Tolerance for position alignment (inches)
-KP_STEERING = 1.0  # Proportional gain for steering
-TIME_PER_FOOT = 0.54  # Time to travel 1 foot (seconds)
-SPEED = 0.75  # Motor speed (0 to 1)
+ANGLE_TOLERANCE = 15.0
+POSITION_TOLERANCE = 3.0
+KP_STEERING = 0.5
+TIME_PER_FOOT = 0.54
+SPEED = 0.75
 
-# Map dimensions (inches)
 MAP_WIDTH_INCHES = 142
 MAP_HEIGHT_INCHES = 92
 
 targets = [(14.5, 16), (16.5, 16), (19.5, 16), (22.5, 16), (34, 16), (38, 10.5), (46, 7.8), (53, 12), (59, 13.5), (60.5, 18.5)]
 current_pos = (9.7, 12.5)
 
+TOP_LEFT_PIXEL = (58, 23) # (58, 469)
+TOP_RIGHT_PIXEL = (760, 23) # (58, 23)
+BOTTOM_LEFT_PIXEL = (58, 469) # (760, 469)
+BOTTOM_RIGHT_PIXEL = (760, 469) # (760, 23)
 
-current_direction = (0.0, 1.0)  # Initial direction vector (facing positive Y-axis)
-
-# Camera pixel coordinates of map corners
-TOP_LEFT_PIXEL = (58, 469)
-TOP_RIGHT_PIXEL = (58, 23)
-BOTTOM_LEFT_PIXEL = (760, 469)
-BOTTOM_RIGHT_PIXEL = (760, 23)
+current_direction = (0.0, 1.0)
 
 # Perspective transform setup
 real_corners = np.array([
@@ -135,18 +132,39 @@ def update_direction_using_displacement(old_pos, new_pos):
 
 
 def get_current_pixel():
-    session = requests.Session()
+    global current_pos
+
     while True:
         try:
-            response = session.get('http://192.168.0.100:8080/', timeout=1)
-            if response.status_code == 200:
-                # Use regex for faster parsing
-                match = re.search(r'(\d+\.?\d*)\D*(\d+\.?\d*)', response.text)
-                if match:
-                    return (float(match.group(1)), float(match.group(2)))
-        except Exception as e:
-            print(f"Error: {e}")
-        time.sleep(0.05)
+            # Fetch the JSON content from the root directory of the website
+            response = requests.get('http://10.144.109.36:5000/light_position', timeout=5)
+            if response.status_code != 200:
+                print(f"Failed to fetch coordinates: HTTP {response.status_code}. Retrying...")
+                time.sleep(0.5)
+                continue
+
+            # Parse the JSON content
+            data = response.json()
+            print(data)
+
+            # Extract the coordinates from the JSON
+            x = data.get('x')
+            y = data.get('y')
+
+            if x is None or y is None:
+                print("Coordinates not found in the JSON. Retrying...")
+                time.sleep(0.1)
+                continue
+
+            print(f"Updated position: ({x}, {y})")
+            return (x, y)
+
+            # Brief pause before the next update
+            time.sleep(0.1)
+
+        except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
+            print(f"Error fetching coordinates: {e}. Retrying...")
+            time.sleep(0.1)
 
 
 def update_position():
