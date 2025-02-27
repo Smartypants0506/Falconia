@@ -3,10 +3,6 @@ import cv2
 # Open webcam
 cap = cv2.VideoCapture(0)
 
-# Set resolution to 640x480
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640*2)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480*2)
-
 if not cap.isOpened():
     print("Error: Could not open webcam.")
     exit()

@@ -88,7 +88,6 @@ def video_feed():
 def light_position():
     global LIGHT_POSITION
     return jsonify({
-        "position": f"({LIGHT_POSITION[0]}, {LIGHT_POSITION[1]})",
         "x": LIGHT_POSITION[0],
         "y": LIGHT_POSITION[1]
     })

@@ -3,6 +3,7 @@ gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw, width=320, height=240, 
 gst-launch-1.0 udpsrc port=5000 ! application/x-rtp, encoding-name=JPEG,payload=26 ! rtpjpegdepay ! jpegdec ! autovideosink sync=false
 
 v4l2-ctl -d /dev/video0 -c focus_auto=0
+
 targets = [(14.5, 16), (16.5, 16), (19.5,16),
            (22.5,16), (34,6), (38, 10.5),
            (46, 7.8), (53, 12), (59,13.5),
