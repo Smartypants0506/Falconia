@@ -40,11 +40,11 @@ class RoverSimulation:
 
     def set_motor1_throttle(self, value):
         self.motor1_throttle = value
-        print(f"Set motor1 throttle: {value}")
+        #print(f"Set motor1 throttle: {value}")
 
     def set_motor2_throttle(self, value):
         self.motor2_throttle = value
-        print(f"Set motor2 throttle: {value}")
+        #print(f"Set motor2 throttle: {value}")
 
     def advance_time(self, dt):
         avg_throttle = (self.motor1_throttle + self.motor2_throttle) / 2
