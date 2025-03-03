@@ -26,7 +26,7 @@ TOP_RIGHT_PIXEL = (760, 23) # (58, 23)
 BOTTOM_LEFT_PIXEL = (58, 469) # (760, 469)
 BOTTOM_RIGHT_PIXEL = (760, 469) # (760, 23)
 
-current_direction = (0.0, 1.0)
+current_direction = (180, 1.0)
 
 def create_vector(angle_degrees, magnitude):
     angle_radians = math.radians(angle_degrees)
@@ -59,7 +59,7 @@ def get_current_pixel():
     while True:
         try:
             # Fetch the JSON content from the root directory of the website
-            response = requests.get('http://10.144.109.36:5000/light_position', timeout=5)
+            response = requests.get('http://192.168.0.100:5000/light_position', timeout=5)
             if response.status_code != 200:
                 print(f"Failed to fetch coordinates: HTTP {response.status_code}. Retrying...")
                 time.sleep(0.5)
@@ -67,7 +67,7 @@ def get_current_pixel():
 
             # Parse the JSON content
             data = response.json()
-            #print(data)
+            print(data)
 
             # Extract the coordinates from the JSON
             x = data.get('x')
@@ -78,7 +78,7 @@ def get_current_pixel():
                 time.sleep(0.1)
                 continue
 
-            #print(f"Updated position: ({x}, {y})")
+            print(f"Updated position: ({x}, {y})")
             return (x, y)
 
             # Brief pause before the next update
@@ -91,62 +91,75 @@ def get_current_pixel():
 def update_position():
     global current_pos
 
+    # Get the current pixel position
     current_pixel = get_current_pixel()
-    #print(f"Current pixel: {current_pixel}")
+    print(f"Current pixel: {current_pixel}")
     pixel_x, pixel_y = current_pixel
-    #print(f"Current pixel: {pixel_x}, {pixel_y}")
 
+    # Calculate the scale factors
     scale_x = MAP_WIDTH_INCHES / (TOP_RIGHT_PIXEL[0] - TOP_LEFT_PIXEL[0])
     scale_y = MAP_HEIGHT_INCHES / (BOTTOM_LEFT_PIXEL[1] - TOP_LEFT_PIXEL[1])
-    #print(f"Scale: {scale_x}, {scale_y}")
+    print(f"Scale: {scale_x}, {scale_y}")
 
-
+    # Convert pixel position to inches
     x_inches = (pixel_x - TOP_LEFT_PIXEL[0]) * scale_x
     y_inches = (pixel_y - TOP_LEFT_PIXEL[1]) * scale_y
-    #print(f"Inches: {x_inches}, {y_inches}")
+    print(f"Inches: {x_inches}, {y_inches}")
 
+    # Calculate the distance from the previous position
+    if current_pos is not None:
+        prev_x, prev_y = current_pos
+        distance = ((x_inches - prev_x)**2 + (y_inches - prev_y)**2)**0.5
+        print(f"Distance from previous position: {distance} inches")
+
+        # If the distance is too large, disregard the new position and retry
+        if distance > 10:
+            print("New position is too far from the previous position. Disregarding and retrying...")
+            return update_position()  # Retry the calculation
+
+    # Update the current position
     current_pos = (x_inches, y_inches)
-    #print(f"Current position: {current_pos}")
+    print(f"Current position: {current_pos}")
 
 def move_forward(distance_inches):
-    #print(f"Distance: {distance_inches}")
+    print(f"Distance: {distance_inches}")
     global current_pos, current_direction
     time_to_move = (distance_inches / 12.0) * TIME_PER_FOOT
-    #print(f"Time to move: {time_to_move}")
+    print(f"Time to move: {time_to_move}")
     kit.motor1.throttle = SPEED
-    kit.motor2.throttle = SPEED
+    kit.motor2.throttle = -SPEED
     time.sleep(time_to_move)
     kit.motor1.throttle = 0
     kit.motor2.throttle = 0
 
     displacement = scale_vector(current_direction, distance_inches)
-    #print(f"Displacement: {displacement}")
+    print(f"Displacement: {displacement}")
     current_pos = add_vectors(current_pos, displacement)
     #print(f"Current position: {current_pos}")
     update_position()
-    #print(f"Updated position: {current_pos}")
+    print(f"Updated position: {current_pos}")
 
 def turn_angle(angle_degrees):
-    #print(f"Angle: {angle_degrees}")
+    print(f"Angle: {angle_degrees}")
     global current_direction
     turn_time = abs(angle_degrees) / DEGREES_PER_SECOND
-    #print(f"Turn time: {turn_time}")
+    print(f"Turn time: {turn_time}")
     if angle_degrees > 0:
-        #print("Turning right")
-        kit.motor1.throttle = SPEED
-        kit.motor2.throttle = -SPEED
+        print("Turning right")
+        kit.motor1.throttle = 1
+        kit.motor2.throttle = 1
     else:
-        #print("Turning left")
-        kit.motor1.throttle = -SPEED
-        kit.motor2.throttle = SPEED
+        print("Turning left")
+        kit.motor1.throttle = -1
+        kit.motor2.throttle = -1
     time.sleep(turn_time)
     kit.motor1.throttle = 0
     kit.motor2.throttle = 0
 
     current_angle, magnitude = get_angle_and_magnitude(current_direction)
-    #print(f"Current angle: {current_angle}, Magnitude: {magnitude}")
+    print(f"Current angle: {current_angle}, Magnitude: {magnitude}")
     new_angle = current_angle + angle_degrees
-    #print(f"New angle: {new_angle}")
+    print(f"New angle: {new_angle}")
     current_direction = create_vector(new_angle, magnitude)
     #print(f"Current direction: {current_direction}")
 
@@ -154,9 +167,9 @@ def adjust_heading(target_angle):
     global current_direction
     while True:
         current_angle, _ = get_angle_and_magnitude(current_direction)
-        #print(f"Current angle: {current_angle}")
+        print(f"Current angle: {current_angle}")
         angle_error = target_angle - current_angle
-        #print(f"Angle error: {angle_error}")
+        print(f"Angle error: {angle_error}")
 
         if angle_error > 180:
             angle_error -= 360
@@ -167,38 +180,30 @@ def adjust_heading(target_angle):
             break
 
         turn_angle(angle_error)
+        update_position()
 
 def move_to_target(target):
     global current_pos, current_direction
     while True:
         update_position()
-        #print(f"Current position: {current_pos}")
+        print(f"Current position: {current_pos}")
         target_vector = subtract_vectors(target, current_pos)
-        #print(f"Target vector: {target_vector}")
+        print(f"Target vector: {target_vector}")
         distance = get_angle_and_magnitude(target_vector)[1]
-        #print(f"Distance: {distance}")
+        print(f"Distance: {distance}")
 
         if distance <= POSITION_TOLERANCE:
             break
 
         desired_angle, _ = get_angle_and_magnitude(target_vector)
-        #print(f"Desired angle: {desired_angle}")
+        print(f"Desired angle: {desired_angle}")
 
         current_angle, _ = get_angle_and_magnitude(current_direction)
         #print(f"Current angle: {current_angle}")
         angle_error = desired_angle - current_angle
-        #print(f"Angle error: {angle_error}")
-        if angle_error > 180:
-            angle_error -= 360
-        elif angle_error < -180:
-            angle_error += 360
+        print(f"Angle error: {angle_error}")
 
-        steering = KP_STEERING * angle_error
-        #print(f"Steering: {steering}")
-        steering = max(-1.0, min(1.0, steering))
-
-        kit.motor1.throttle = SPEED + steering
-        kit.motor2.throttle = SPEED - steering
+        adjust_heading(angle_error)
         time.sleep(0.1)
 
     kit.motor1.throttle = 0
@@ -217,11 +222,11 @@ def main():
     #print(f"Current direction: {current_direction}")
 
     for target in targets:
-        #print(f"Target: {target}")
+        print(f"Target: {target}")
         target_vector = subtract_vectors(target, current_pos)
-        #print(f"Target vector: {target_vector}")
+        print(f"Target vector: {target_vector}")
         target_angle, _ = get_angle_and_magnitude(target_vector)
-        #print(f"Target angle: {target_angle}")
+        print(f"Target angle: {target_angle}")
         adjust_heading(target_angle)
         move_to_target(target)
 

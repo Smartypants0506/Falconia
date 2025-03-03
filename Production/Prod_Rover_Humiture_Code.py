@@ -25,7 +25,7 @@ while True:
         temperature = sensor.temperature
         humidity = sensor.humidity
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"{timestamp} - Temperature: {temperature:.1f}°C  Humidity: {humidity:.1f}%\n"
+        log_entry = f"{timestamp} - Temperature: {temperature}°C  Humidity: {humidity}\n"
 
         # Log sensor data
         with open(log_file, "a") as file:

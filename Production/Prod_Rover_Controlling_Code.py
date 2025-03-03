@@ -29,23 +29,31 @@ def motor_control(stdscr):
 
         # Determine target speeds
         if key == curses.KEY_UP:
+            time.sleep(8)
             kit.motor1.throttle = 0.75
-            kit.motor2.throttle = 0.75
+            kit.motor2.throttle = -0.75
+            time.sleep(0.3)
             motor1_speed = 0.75
             motor2_speed = 0.75
         elif key == curses.KEY_DOWN:
+            time.sleep(8)
             kit.motor1.throttle = -0.75
-            kit.motor2.throttle = -0.75
+            kit.motor2.throttle = 0.75
+            time.sleep(0.3)
             motor1_speed = -0.75
             motor2_speed = -0.75
         elif key == curses.KEY_LEFT:
+            time.sleep(8)
             kit.motor1.throttle = 1
-            kit.motor2.throttle = -1
+            kit.motor2.throttle = 1
+            time.sleep(0.3)
             motor1_speed = 1
             motor2_speed = -1
         elif key == curses.KEY_RIGHT:
+            time.sleep(8)
             kit.motor1.throttle = -1
-            kit.motor2.throttle = 1
+            kit.motor2.throttle = -1
+            time.sleep(0.3)
             motor1_speed = -1
             motor2_speed = 1
         else:
