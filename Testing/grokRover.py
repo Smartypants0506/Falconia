@@ -8,7 +8,7 @@ import json
 kit = MotorKit()
 
 # Control parameters
-ANGLE_TOLERANCE = 15.0  # degrees
+ANGLE_TOLERANCE = 5.0  # degrees
 POSITION_TOLERANCE = 10.0  # pixels
 SPEED = 0.75  # Motor speed (-1.0 to 1.0)
 KP_STEERING = 0.02  # Proportional gain for steering
