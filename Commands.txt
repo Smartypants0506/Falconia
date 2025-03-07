@@ -1,4 +1,4 @@
-gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw, width=320, height=240, framerate=15/1, format=YUY2 ! videoconvert ! video/x-raw, format=I420 ! jpegenc quality=10 ! rtpjpegpay ! udpsink host=192.168.0.101 port=5000 sync=false
+gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw, width=640, height=480, framerate=15/1, format=YUY2 ! videoconvert ! video/x-raw, format=I420 ! jpegenc quality=10 ! rtpjpegpay ! udpsink host=192.168.0.100 port=5000 sync=false
 
 gst-launch-1.0 udpsrc port=5000 ! application/x-rtp, encoding-name=JPEG,payload=26 ! rtpjpegdepay ! jpegdec ! autovideosink sync=false
 
@@ -9,4 +9,8 @@ targets = [(14.5, 16), (16.5, 16), (19.5,16),
            (46, 7.8), (53, 12), (59,13.5),
            (60.5,18.5)]
 
+gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw, width=320, height=240, framerate=15/1, format=YUY2 ! videoconvert ! video/x-raw, format=I420 ! jpegenc quality=10 ! rtpjpegpay ! udpsink host=192.168.0.100 port=5000 sync=false
 
+gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw, width=1280, height=720, framerate=5/1, format=YUY2 ! videoconvert ! video/x-raw, format=I420 ! jpegenc quality=50 ! rtpjpegpay ! udpsink host=192.168.0.100 port=5000 sync=false
+
+#gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw, width=1280, height=720, framerate=10/1, format=YUY2 ! videoconvert ! video/x-raw, format=I420 ! jpegenc quality=10 ! rtpjpegpay ! udpsink host=192.168.0.100 port=5000 sync=false
