@@ -3,7 +3,9 @@ import numpy as np
 import math
 
 # Initialize the webcam (0 is usually the default camera)
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+#cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # Turn off auto exposure
+#cap.set(cv2.CAP_PROP_EXPOSURE, -6)
 
 # Check if the webcam opened successfully
 if not cap.isOpened():
@@ -171,8 +173,8 @@ while True:
             # Display the distance and angle on the frame
             text_distance = f"Distance: {distance:.2f} px"
             text_angle = f"Angle: {angle:.2f} deg"
-            cv2.putText(result_frame, text_distance, (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-            cv2.putText(result_frame, text_angle, (10, 190), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(result_frame, text_distance, (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            cv2.putText(result_frame, text_angle, (10, 190), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
         # Display the points
         for point in points:
@@ -184,8 +186,8 @@ while True:
         # Display the length and angle on the frame
         text_length = f"Length: {length:.2f} px"
         text_angle = f"Line Angle: {angle:.2f} deg"
-        cv2.putText(result_frame, text_length, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-        cv2.putText(result_frame, text_angle, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(result_frame, text_length, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        cv2.putText(result_frame, text_angle, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
     else:
         # Display an error message if one or both colors are not detected
         cv2.putText(result_frame, "Error: Colors not detected!", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)

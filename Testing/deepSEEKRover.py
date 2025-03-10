@@ -8,38 +8,38 @@ import json
 kit = MotorKit()
 
 # Rover-specific constants (independent from camera)
-ANGLE_TOLERANCE = 10.0  # degrees
+ANGLE_TOLERANCE = 20.0  # degrees
 POSITION_TOLERANCE = 20.0  # pixels (matches camera's PIXEL_TOLERANCE)
 SPEED = 0.75  # Default motor speed (-1.0 to 1.0)
 KP_STEERING = 0.02  # Proportional gain for steering
 STEP_TIME = 0.1  # Time per movement step (seconds)
 
 # Rover’s independent target list
-targets = [(233, 84), (390, 86), (617, 92), (563, 290), (438, 392), (239, 414), (70, 394), (56, 313)]
+targets = [(370, 173), (305, 170), (230, 179)]
 
 # Camera server URL (replace with your camera Pi's IP)
-CAMERA_URL = 'http://<camera_pi_ip>:5000'
+CAMERA_URL = 'http://192.168.0.124:5000'
 
 # Motor control functions
 def forward(speed=SPEED):
     """Move the rover forward at the specified speed."""
     kit.motor1.throttle = speed   # Right wheel forward
-    kit.motor2.throttle = speed   # Left wheel forward
+    kit.motor2.throttle = -speed   # Left wheel forward
 
 def backward(speed=SPEED):
     """Move the rover backward at the specified speed."""
     kit.motor1.throttle = -speed  # Right wheel backward
-    kit.motor2.throttle = -speed  # Left wheel backward
+    kit.motor2.throttle = speed  # Left wheel backward
 
 def left(speed=SPEED):
     """Turn the rover left in place at the specified speed."""
-    kit.motor1.throttle = speed   # Right wheel forward
-    kit.motor2.throttle = -speed  # Left wheel backward
+    kit.motor1.throttle = 1   # Right wheel forward
+    kit.motor2.throttle = 1  # Left wheel backward
 
 def right(speed=SPEED):
     """Turn the rover right in place at the specified speed."""
-    kit.motor1.throttle = -speed  # Right wheel backward
-    kit.motor2.throttle = speed   # Left wheel forward
+    kit.motor1.throttle = -1  # Right wheel backward
+    kit.motor2.throttle = -1   # Left wheel forward
 
 def stop():
     """Stop all rover movement."""
@@ -50,10 +50,10 @@ def get_markers(target_index):
     """Fetch red and blue pixel coordinates from the camera server."""
     while True:
         try:
-            response = requests.get(f'{CAMERA_URL}/markers?target_index={target_index}', timeout=5)
+            response = requests.get(f'{CAMERA_URL}/markers', timeout=1)
             if response.status_code != 200:
                 print(f"HTTP {response.status_code}. Retrying...")
-                time.sleep(0.5)
+                time.sleep(0.1)
                 continue
             data = response.json()
             red = data.get('red')
@@ -65,7 +65,7 @@ def get_markers(target_index):
             return (red['x'], red['y']), (blue['x'], blue['y'])
         except (requests.RequestException, json.JSONDecodeError) as e:
             print(f"Error fetching markers: {e}. Retrying...")
-            time.sleep(1)
+            time.sleep(0.1)
 
 def calculate_center(point1, point2):
     """Calculate the center point between two points (matches camera's draw_visuals)."""
@@ -99,7 +99,7 @@ def turn_to_angle(target_angle, target_index):
         center = calculate_center(red_pixel, blue_pixel)
         _, current_angle = calculate_angle_and_length(red_pixel, blue_pixel)
         angle_error = normalize_angle(target_angle - current_angle)
-
+        print(f"angle error: {angle_error}")
         if abs(angle_error) <= ANGLE_TOLERANCE:
             stop()
             break
@@ -119,9 +119,10 @@ def main():
             red_pixel, blue_pixel = get_markers(i)
             center = calculate_center(red_pixel, blue_pixel)
             orientation_length, current_angle = calculate_angle_and_length(red_pixel, blue_pixel)
-
+            print(f"orientation_length: {orientation_length}, current_angle: {current_angle}")
             target_vector = (target[0] - center[0], target[1] - center[1])
             distance = math.hypot(target_vector[0], target_vector[1])
+            print(f"distance: {distance}")
 
             if distance <= POSITION_TOLERANCE:
                 print(f"Reached target {i}: {target}")
@@ -137,13 +138,8 @@ def main():
                 turn_to_angle(target_angle, i)
                 continue
 
-            # Move forward with steering adjustment
-            steering = KP_STEERING * angle_error
-            steering = max(-1.0, min(1.0, steering))
-            right_speed = SPEED - steering
-            left_speed = SPEED + steering
-            kit.motor1.throttle = right_speed  # Right wheel
-            kit.motor2.throttle = left_speed   # Left wheel
+
+            backward()
             time.sleep(STEP_TIME)
             stop()
 

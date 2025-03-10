@@ -8,7 +8,7 @@ from Testing.CameraTestingCode import PIXEL_TOLERANCE
 app = Flask(__name__)
 
 # Initialize webcam
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 if not cap.isOpened():
     print("Error: Could not open webcam.")
     exit()
@@ -17,11 +17,11 @@ if not cap.isOpened():
 smoothed_red = None
 smoothed_blue = None
 SMOOTHING_FACTOR = 0.1
-DOMINANCE_THRESHOLD = 30
+DOMINANCE_THRESHOLD = 25
 PIXEL_TOLERANCE = 20
 
 # Define the array of targets in pixel coordinates as tuples
-targets = [(233, 84), (390, 86), (617, 92), (563, 290), (438, 392), (239, 414), (70, 394), (56, 313)]
+targets = [(370, 173), (305, 170), (230, 179)]
 
 
 def find_most_dominant_pixel(channel, other_channels, color_name):
@@ -89,7 +89,7 @@ def process_frame():
         return None, None, None
 
     # Flip the frame horizontally (mirror effect)
-    frame = cv2.flip(frame, 1)
+
 
     # Convert BGR (OpenCV default) to RGB
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
