@@ -1,83 +1,93 @@
-import cv2
-import numpy as np
-from flask import Flask, Response, render_template, jsonify
+import time
+import curses
+from adafruit_motorkit import MotorKit
 
-app = Flask(__name__)
+# Initialize the motor hat
+kit = MotorKit()
 
-LIGHT_POSITION = None  # Stores the detected bright spot coordinates
+# Configuration
+MAX_SPEED = 1.0  # Maximum throttle (range: 0 to 1)
+ACCELERATION_STEP = 0.05  # How fast it speeds up
+DECELERATION_STEP = 0.05  # Ensure both motors decelerate at the same rate
+UPDATE_RATE = 0.05  # Update interval (lower = smoother, higher = more responsive)
 
-def find_brightest_spot(frame):
-    """Detects the brightest spot in the frame and updates LIGHT_POSITION."""
-    global LIGHT_POSITION
+# Current speed levels
+motor1_speed = 0.0
+motor2_speed = 0.0
 
-    # Convert to grayscale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+# Track the previous action
+previous_action = 'stop'
 
-    # Apply Gaussian blur to reduce noise
-    blurred = cv2.GaussianBlur(gray, (15, 15), 0)
+def motor_control(stdscr):
+    global motor1_speed, motor2_speed, previous_action
+    curses.cbreak()
+    curses.halfdelay(1)  # Reduce delay for key holds (1 = 100ms)
+    stdscr.nodelay(True)  # Do not block waiting for user input
+    stdscr.keypad(True)
+    stdscr.clear()
+    stdscr.addstr("Use arrow keys to control motors. Press 'q' to exit.\n")
 
-    # Find the brightest spot
-    minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(blurred)
-    LIGHT_POSITION = maxLoc  # Store coordinates of the brightest spot
+    while True:
+        key = stdscr.getch()
 
-    print(f"✅ Brightest Spot Found at: {LIGHT_POSITION}")  # Debugging output
+        # Determine target speeds
+        if key == curses.KEY_LEFT:
+            if previous_action == 'stop':
+                time.sleep(3)
+                kit.motor1.throttle = 0.75
+                kit.motor2.throttle = -0.75
+                time.sleep(0.15)
+                motor1_speed = 0.75
+                motor2_speed = 0.75
+                previous_action = 'forward'
+        elif key == curses.KEY_RIGHT:
+            if previous_action == 'stop':
+                time.sleep(3)
+                kit.motor1.throttle = -0.75
+                kit.motor2.throttle = 0.75
+                time.sleep(0.15)
+                motor1_speed = -0.0
+                motor2_speed = -0.0
+                previous_action = 'forward'
+        elif key == curses.KEY_UP:
+            time.sleep(3)
+            kit.motor1.throttle = -1
+            kit.motor2.throttle = -1
+            time.sleep(0.15)
+            motor1_speed = 0
+            motor2_speed = 0
+            previous_action = 'left'
+        elif key == curses.KEY_DOWN:
+            time.sleep(3)
+            kit.motor1.throttle = 1
+            kit.motor2.throttle = 1
+            time.sleep(0.15)
+            motor1_speed = 0
+            motor2_speed = 0
+            previous_action = 'right'
+        else:
+            kit.motor1.throttle = 0
+            kit.motor2.throttle = 0
+            motor1_speed = 0
+            motor2_speed = 0
+            previous_action = 'stop'
 
+        # Display status
+        stdscr.clear()
+        stdscr.addstr("Use arrow keys to control motors. Press 'q' to exit.\n")
+        stdscr.addstr(f"Motor 1 Speed: {motor1_speed}\n")
+        stdscr.addstr(f"Motor 2 Speed: {motor2_speed}\n")
+        stdscr.refresh()
 
-def generate_frames():
-    """Captures camera frames, finds the brightest spot, and streams video."""
-    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # Try CAP_MSMF if needed
+        # Exit on 'q' key
+        if key == ord('q'):
+            break
 
-    # Ensure camera opens successfully
-    if not cap.isOpened():
-        print("❌ Error: Could not open camera.")
-        return
+        time.sleep(UPDATE_RATE)
 
-    # Reduce camera exposure to improve bright spot detection
-        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # Turn off auto exposure
-        cap.set(cv2.CAP_PROP_EXPOSURE, -6)  # Adjust exposure manually
-
-    print("✅ Camera opened in Flask app.")
-
-    try:
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                print("❌ Error: Could not read frame.")
-                break  # Exit loop if no frame
-
-            # Find the brightest spot in the frame
-            find_brightest_spot(frame)
-
-            # Encode frame for streaming
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-    finally:
-        cap.release()
-        print("✅ Camera released in Flask app.")
-
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
-@app.route('/video_feed')
-def video_feed():
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-@app.route('/light_position')
-def light_position():
-    """Returns the last detected bright spot position."""
-    global LIGHT_POSITION
-    if LIGHT_POSITION is None:
-        return jsonify({"error": "No light detected yet"}), 400
-    return jsonify({"position": LIGHT_POSITION})
-
+    # Ensure motors fully stop when exiting
+    kit.motor1.throttle = 0
+    kit.motor2.throttle = 0
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    curses.wrapper(motor_control)

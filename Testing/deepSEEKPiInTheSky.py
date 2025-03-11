@@ -3,9 +3,6 @@ import numpy as np
 from flask import Flask, jsonify, request, Response
 import math
 
-#from Testing.CameraTestingCode import PIXEL_TOLERANCE
-action = ""
-
 app = Flask(__name__)
 
 # Initialize webcam
@@ -133,7 +130,6 @@ def process_frame():
 
 def draw_visuals(frame, smoothed_red, smoothed_blue, target_index):
     """Draw markers, direction vectors, targets, and detailed metrics on the frame."""
-    global action
     if smoothed_red:
         cv2.circle(frame, smoothed_red, 20, (0, 0, 255), 2)  # Red circle
     if smoothed_blue:
