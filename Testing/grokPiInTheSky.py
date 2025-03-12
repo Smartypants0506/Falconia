@@ -7,6 +7,10 @@ app = Flask(__name__)
 
 # Initialize webcam
 cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+#cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cap.set(cv2.CAP_PROP_FPS, 15)
 if not cap.isOpened():
     print("Error: Could not open webcam.")
     exit()
@@ -19,7 +23,7 @@ DOMINANCE_THRESHOLD = 25
 PIXEL_TOLERANCE = 20
 
 # Define the array of targets in pixel coordinates as tuples
-targets = [(370, 173), (305, 170), (230, 179)]
+targets = [(249, 252), (267, 375), (266, 494), (322, 571), (443, 580), (573, 599), (698, 595), (803, 589), (818, 535), (818, 446), (814, 371), (775, 333), (682, 323), (573, 312), (485, 313), (414, 325), (409, 424), (457, 494)]
 
 # Define angle and position tolerances
 ANGLE_TOLERANCE = 10  # degrees

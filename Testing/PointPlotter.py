@@ -22,7 +22,7 @@ def get_points_from_camera():
     points = []
 
     # Open the default camera (usually camera 0)
-    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
         print("Error: Could not open camera.")
