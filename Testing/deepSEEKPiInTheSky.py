@@ -2,11 +2,12 @@ import cv2
 import numpy as np
 from flask import Flask, jsonify, request, Response
 import math
+import time
 
 app = Flask(__name__)
 
 # Initialize webcam
-cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Error: Could not open webcam.")
     exit()
@@ -19,7 +20,34 @@ DOMINANCE_THRESHOLD = 25
 PIXEL_TOLERANCE = 20
 
 # Define the array of targets in pixel coordinates as tuples
-targets = [(370, 173), (305, 170), (230, 179)]
+targets = [(249, 252), (267, 375), (266, 494), (322, 571), (443, 580), (573, 599), (698, 595), (803, 589), (818, 535), (818, 446), (814, 371), (775, 333), (682, 323), (573, 312), (485, 313), (414, 325), (409, 424), (457, 494)]
+
+# Global variables to store previous angle and length
+prev_angle = None
+prev_length = None
+ANGLE_TOLERANCE = 10  # degrees
+LENGTH_TOLERANCE = 20  # pixels
+
+
+def get_absolute_angle(x1, y1, x2, y2):
+    """Returns the absolute angle (0 to 360 degrees) of the vector from (x1, y1) to (x2, y2)."""
+    dx = x2 - x1
+    dy = y2 - y1
+    angle = math.atan2(dy, dx)  # Angle in radians (-π to π)
+    angle_degrees = math.degrees(angle)  # Convert to degrees
+
+    # Convert negative angles to [0, 360] range
+    if angle_degrees < 0:
+        angle_degrees += 360
+
+    return angle_degrees
+
+
+def get_signed_angle_difference(angle1, angle2):
+    """Returns the signed difference (angle1 - angle2) in the range [-180, 180]."""
+    diff = angle1 - angle2
+
+    return diff
 
 
 def find_most_dominant_pixel(channel, other_channels, color_name):
@@ -36,7 +64,6 @@ def find_most_dominant_pixel(channel, other_channels, color_name):
     # Find the pixel with the highest dominance score
     y, x = np.unravel_index(np.argmax(dominance), dominance.shape)
     return (x, y)  # Return coordinates (x, y)
-
 
 def normalize_angle(angle):
     """Normalize angle to [-180, 180] degrees."""
@@ -55,11 +82,10 @@ def calculate_angle_between_lines(line1_start, line1_end, line2_start, line2_end
     # Calculate the angle in radians and convert to degrees
     angle_rad = math.acos(dot_product / (magnitude1 * magnitude2))
     angle_deg = math.degrees(angle_rad)
+    #print(angle_deg)
 
     return angle_deg
 
-
-# Function to calculate the length and angle of a line
 def calculate_angle_and_length(point1, point2):
     # Calculate the length of the line using Euclidean distance
     length = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2)
@@ -70,24 +96,28 @@ def calculate_angle_and_length(point1, point2):
 
     return length, angle_deg
 
-
-# Function to calculate the center point between two points
 def calculate_center(point1, point2):
     return ((point1[0] + point2[0]) // 2, (point1[1] + point2[1]) // 2)
 
+def is_reading_valid(new_length, new_angle):
+    """Check if the new reading is within tolerance of the previous reading."""
+    global prev_length, prev_angle
+    if prev_length is None or prev_angle is None:
+        return True
+    length_diff = abs(new_length - prev_length)
+    angle_diff = abs(normalize_angle(new_angle - prev_angle))
+    return length_diff <= LENGTH_TOLERANCE and angle_diff <= ANGLE_TOLERANCE
 
 def process_frame():
     """Process the frame and return smoothed marker positions."""
     global smoothed_red, smoothed_blue
     ret, frame = cap.read()
+    cv2.flip(frame, 1)
 
     # If frame is not captured, break the loop
     if not ret:
         print("Error: Failed to capture frame.")
         return None, None, None
-
-    # Flip the frame horizontally (mirror effect)
-
 
     # Convert BGR (OpenCV default) to RGB
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -127,7 +157,6 @@ def process_frame():
 
     return frame, smoothed_red, smoothed_blue
 
-
 def draw_visuals(frame, smoothed_red, smoothed_blue, target_index):
     """Draw markers, direction vectors, targets, and detailed metrics on the frame."""
     if smoothed_red:
@@ -164,7 +193,12 @@ def draw_visuals(frame, smoothed_red, smoothed_blue, target_index):
                     print("All waypoints reached!")
 
             # Calculate the angle between the red-blue line and the yellow-to-target line
-            angle = calculate_angle_between_lines(smoothed_red, smoothed_blue, center, target_point)
+            angle1 = get_absolute_angle(center[0], center[1], target_point[0], target_point[1])
+            angle2 = get_absolute_angle(100, 100, 200, 100)
+            angle3 = get_absolute_angle(smoothed_red[0], smoothed_red[1], smoothed_blue[0], smoothed_blue[1])
+            anglex = get_signed_angle_difference(angle1, angle2)
+            angley = get_signed_angle_difference(angle3, angle2)
+            angle = -(anglex - angley)
 
             # Display the distance and angle on the frame
             text_distance = f"Distance: {distance:.2f} px"
@@ -190,7 +224,6 @@ def draw_visuals(frame, smoothed_red, smoothed_blue, target_index):
 
     return frame
 
-
 @app.route('/markers', methods=['GET'])
 def get_markers():
     """Return marker coordinates for the rover without local display."""
@@ -207,7 +240,6 @@ def get_markers():
         'red': {'x': smoothed_red[0], 'y': smoothed_red[1]} if smoothed_red else None,
         'blue': {'x': smoothed_blue[0], 'y': smoothed_blue[1]} if smoothed_blue else None
     })
-
 
 def generate_frames(target_index):
     """Generator for MJPEG streaming of annotated frames."""
@@ -227,7 +259,7 @@ def generate_frames(target_index):
         # Yield the frame in MJPEG format
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-
+        time.sleep(0.25)
 
 @app.route('/display', methods=['GET'])
 def display():
@@ -236,6 +268,39 @@ def display():
     return Response(generate_frames(target_index),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/action', methods=['GET'])
+def get_action():
+    """Return an action based on the angle and distance to the target."""
+    frame, smoothed_red, smoothed_blue = process_frame()
+    if frame is None:
+        return jsonify({'error': 'Failed to capture frame'}), 500
+    if smoothed_red is None or smoothed_blue is None:
+        return jsonify({'error': 'Markers not detected'}), 400
+    if len(targets) == 0:
+        return jsonify({'action': 'stop', 'message': 'No more targets'})
+
+    center = calculate_center(smoothed_red, smoothed_blue)
+    target_point = targets[0]
+    distance = math.sqrt((center[0] - target_point[0]) ** 2 + (center[1] - target_point[1]) ** 2)
+    angle1 = get_absolute_angle(center[0], center[1], target_point[0], target_point[1])
+    angle2 = get_absolute_angle(100, 100, 200, 100)
+    angle3 = get_absolute_angle(smoothed_red[0], smoothed_red[1], smoothed_blue[0], smoothed_blue[1])
+    anglex = get_signed_angle_difference(angle1, angle2)
+    angley = get_signed_angle_difference(angle3, angle2)
+    angle = -(anglex - angley)
+
+
+    if distance <= PIXEL_TOLERANCE:
+        action = 'forward'
+    elif angle > ANGLE_TOLERANCE:
+        action = 'left'
+    elif angle < -ANGLE_TOLERANCE:
+        action = 'right'
+    else:
+        action = 'forward'
+
+    return jsonify({'action': action, 'distance': distance, 'angle': angle})
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=12345)
