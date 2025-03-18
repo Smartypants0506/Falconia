@@ -20,12 +20,12 @@ DOMINANCE_THRESHOLD = 25
 PIXEL_TOLERANCE = 20
 
 # Define the array of targets in pixel coordinates as tuples
-targets = [(249, 252), (267, 375), (266, 494), (322, 571), (443, 580), (573, 599), (698, 595), (803, 589), (818, 535), (818, 446), (814, 371), (775, 333), (682, 323), (573, 312), (485, 313), (414, 325), (409, 424), (457, 494)]
+targets = [(1257, 261), (1500, 261), (1499, 342), (1493, 386), (1448, 391), (1405, 397), (1355, 395), (1305, 393), (1275, 383), (1252, 361), (1251, 336)]
 
 # Global variables to store previous angle and length
 prev_angle = None
 prev_length = None
-ANGLE_TOLERANCE = 10  # degrees
+ANGLE_TOLERANCE = 15  # degrees
 LENGTH_TOLERANCE = 20  # pixels
 
 
@@ -242,7 +242,7 @@ def generate_frames(target_index):
         # Yield the frame in MJPEG format
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-        time.sleep(1/6)
+        # time.sleep(1/10)
 
 @app.route('/markers', methods=['GET'])
 def get_markers():
@@ -290,15 +290,14 @@ def get_action():
     angley = get_signed_angle_difference(angle3, angle2)
     angle = -(anglex - angley)
 
-
-    if distance <= PIXEL_TOLERANCE:
-        action = 'forward'
-    elif angle > ANGLE_TOLERANCE:
-        action = 'left'
-    elif angle < -ANGLE_TOLERANCE:
+    if angle > ANGLE_TOLERANCE:
         action = 'right'
-    else:
+    elif angle < -ANGLE_TOLERANCE:
+        action = 'left'
+    elif distance >= PIXEL_TOLERANCE:
         action = 'forward'
+    else:
+        action = 'error'
 
     return jsonify({'action': action, 'distance': distance, 'angle': angle})
 

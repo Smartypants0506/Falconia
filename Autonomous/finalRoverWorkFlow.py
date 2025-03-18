@@ -4,6 +4,8 @@ import csv
 import os
 import spidev
 from adafruit_motorkit import MotorKit
+import adafruit_dht
+import board
 
 # Initialize motor kit
 kit = MotorKit()
@@ -17,7 +19,7 @@ CAMERA_URL = 'http://192.168.0.103:12345'
 FLASK_SERVER_URL = 'http://192.168.0.103:5000/get_markers'
 
 # Sensor setup
-DHT_SENSOR = Adafruit_DHT.DHT11
+DHT_SENSOR = adafruit_dht.DHT11
 DHT_PIN = 4  # GPIO pin where the DHT11 is connected
 
 # SPI setup for MCP3008 ADC
@@ -70,22 +72,22 @@ def write_to_csv(center_x, center_y, temperature, humidity, gas_level):
         writer.writerow([center_x, center_y, temperature, humidity, gas_level])
 
 # Motor control functions
-def forward(speed=SPEED):
+def backward(speed=SPEED):
     """Move the rover forward at the specified speed."""
     kit.motor1.throttle = -speed   # Right wheel forward
     kit.motor2.throttle = -speed   # Left wheel forward
 
-def backward(speed=SPEED):
+def forward(speed=SPEED):
     """Move the rover backward at the specified speed."""
     kit.motor1.throttle = speed  # Right wheel backward
     kit.motor2.throttle = speed  # Left wheel backward
 
-def left(speed=SPEED):
+def right(speed=SPEED):
     """Turn the rover left in place at the specified speed."""
     kit.motor1.throttle = 1   # Right wheel forward
     kit.motor2.throttle = -1  # Left wheel backward
 
-def right(speed=SPEED):
+def left(speed=SPEED):
     """Turn the rover right in place at the specified speed."""
     kit.motor1.throttle = -1 # Right wheel backward
     kit.motor2.throttle = 1  # Left wheel forward
@@ -99,7 +101,7 @@ def get_action():
     """Fetch the action from the camera server."""
     while True:
         try:
-            response = requests.get(f'{CAMERA_URL}/action', timeout=1)
+            response = requests.get(f'{CAMERA_URL}/action', timeout=3)
             if response.status_code != 200:
                 print(f"HTTP {response.status_code}. Retrying...")
                 time.sleep(0.1)
@@ -134,7 +136,7 @@ def main():
 
         # Perform the action
         if action == 'forward':
-            forward()
+            backward()
         elif action == 'left':
             left()
         elif action == 'right':

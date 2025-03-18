@@ -6,8 +6,8 @@ import requests
 kit = MotorKit()
 
 # Rover-specific constants
-SPEED = 0.75  # Default motor speed (-1.0 to 1.0)
-STEP_TIME = 0.1  # Time per movement step (seconds)
+SPEED = 0.5  # Default motor speed (-1.0 to 1.0)
+STEP_TIME = 0.05  # Time per movement step (seconds)
 
 # Camera server URL (replace with your camera Pi's IP)
 CAMERA_URL = 'http://192.168.0.103:12345'
@@ -25,13 +25,13 @@ def backward(speed=SPEED):
 
 def left(speed=SPEED):
     """Turn the rover left in place at the specified speed."""
-    kit.motor1.throttle = 1   # Right wheel forward
-    kit.motor2.throttle = -1  # Left wheel backward
+    kit.motor1.throttle = 0.75   # Right wheel forward
+    kit.motor2.throttle = -0.75  # Left wheel backward
 
 def right(speed=SPEED):
     """Turn the rover right in place at the specified speed."""
-    kit.motor1.throttle = -1 # Right wheel backward
-    kit.motor2.throttle = 1  # Left wheel forward
+    kit.motor1.throttle = -0.75 # Right wheel backward
+    kit.motor2.throttle = 0.75 # Left wheel forward
 
 def stop():
     """Stop all rover movement."""
@@ -42,7 +42,7 @@ def get_action():
     """Fetch the action from the camera server."""
     while True:
         try:
-            response = requests.get(f'{CAMERA_URL}/action', timeout=1)
+            response = requests.get(f'{CAMERA_URL}/action', timeout=3)
             if response.status_code != 200:
                 print(f"HTTP {response.status_code}. Retrying...")
                 time.sleep(0.1)
@@ -52,6 +52,7 @@ def get_action():
         except (requests.RequestException, KeyError) as e:
             print(f"Error fetching action: {e}. Retrying...")
             time.sleep(0.1)
+            stop()
 
 def main():
     """Main control loop for autonomous navigation."""

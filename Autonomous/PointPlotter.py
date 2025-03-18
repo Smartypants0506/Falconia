@@ -22,7 +22,6 @@ def get_points_from_image(image_path):
 
     # Reset points list
     points = []
-
     # Load the image
     frame = cv2.imread(image_path)
 
@@ -59,6 +58,6 @@ def get_points_from_image(image_path):
 
 # Example usage
 if __name__ == "__main__":
-    image_path = "your_image.jpg"  # Change this to the path of your image
+    image_path = "/Users/omkar/Downloads/one.png"  # Change this to the path of your image
     selected_points = get_points_from_image(image_path)
     print("\nFinal list of points:", selected_points)

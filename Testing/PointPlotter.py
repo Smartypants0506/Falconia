@@ -3,7 +3,6 @@ import numpy as np
 
 # Global variables to store the clicked points
 points = []
-frame = None
 
 
 def mouse_callback(event, x, y, flags, param):
@@ -13,32 +12,48 @@ def mouse_callback(event, x, y, flags, param):
         # Draw a circle at the clicked point
         cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)
         print(f"Point added: ({x}, {y})")
-        cv2.imshow("Image - Click to select points, press Enter to finish", frame)
 
 
-def get_points_from_image(image_path):
-    """Capture points from a still image"""
+def get_points_from_camera():
+    """Capture points from camera feed"""
     global points, frame
 
     # Reset points list
     points = []
 
-    # Load the image
-    frame = cv2.imread(image_path)
+    # Open the default camera (usually camera 0)
+    cap = cv2.VideoCapture(0)
 
-    if frame is None:
-        print("Error: Could not load image.")
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
         return []
 
     # Set up the window and mouse callback
-    cv2.namedWindow("Image - Click to select points, press Enter to finish")
-    cv2.setMouseCallback("Image - Click to select points, press Enter to finish", mouse_callback)
+    cv2.namedWindow("Camera - Click to select points, press Enter to finish")
+    cv2.setMouseCallback("Camera - Click to select points, press Enter to finish",
+                         mouse_callback)
 
-    print("Click on the image to select points. Press Enter when done.")
+    print("Click on the camera feed to select points. Press Enter when done.")
 
     while True:
-        # Show the image with marked points
-        cv2.imshow("Image - Click to select points, press Enter to finish", frame)
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+
+        if not ret:
+            print("Error: Could not read frame.")
+            break
+
+        # Display instructions on the frame
+        cv2.putText(frame,
+                    "Click to select points, press Enter to finish",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 255, 255),
+                    2)
+
+        # Show the frame with marked points
+        cv2.imshow("Camera - Click to select points, press Enter to finish", frame)
 
         # Wait for key press
         key = cv2.waitKey(1) & 0xFF
@@ -52,6 +67,7 @@ def get_points_from_image(image_path):
             break
 
     # Clean up
+    cap.release()
     cv2.destroyAllWindows()
 
     return points
@@ -59,6 +75,9 @@ def get_points_from_image(image_path):
 
 # Example usage
 if __name__ == "__main__":
-    image_path = "your_image.jpg"  # Change this to the path of your image
-    selected_points = get_points_from_image(image_path)
+    selected_points = get_points_from_camera()
     print("\nFinal list of points:", selected_points)
+
+    # You can now use these points in other functions
+    # For example:
+    # some_function(selected_points)
