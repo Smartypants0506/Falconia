@@ -14,7 +14,7 @@ SPEED = 0.75  # Default motor speed (-1.0 to 1.0)
 KP_STEERING = 0.02  # Proportional gain for steering
 STEP_TIME = 0.1  # Time per movement step (seconds)
 
-# Rover’s independent target list
+# Roverâs independent target list
 targets = [(370, 173), (305, 170), (230, 179)]
 
 # Camera server URL (replace with your camera Pi's IP)

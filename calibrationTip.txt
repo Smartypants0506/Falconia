@@ -55,11 +55,11 @@ Steps:
 
         If the rover oscillates around the target angle, introduce a small Kd (e.g., 0.05).
 
-        If there’s a steady-state error (e.g., it stops slightly before the target), introduce a small Ki (e.g., 0.1).
+        If thereâs a steady-state error (e.g., it stops slightly before the target), introduce a small Ki (e.g., 0.1).
 
     Repeat and Fine-Tune:
 
-        Test with different angles (e.g., 45°, 180°) and adjust the gains until the rover turns accurately and smoothly.
+        Test with different angles (e.g., 45Â°, 180Â°) and adjust the gains until the rover turns accurately and smoothly.
 
 Example:
 python
@@ -76,7 +76,7 @@ pid_steering = PIDController(
 
 3. Calibrating Motor Speed and Timing
 
-The rover’s movement depends on motor speed and timing. To calibrate it:
+The roverâs movement depends on motor speed and timing. To calibrate it:
 Steps:
 
     Measure Travel Time:
@@ -100,7 +100,7 @@ SPEED = 0.75  # Motor speed (0 to 1)
 TIME_PER_FOOT = 0.54  # Time to travel 1 foot (seconds)
 TIME_PER_360 = 1.6  # Time for a full 360-degree turn (seconds)
 
-4. Calibrating the Camera’s Brightness Threshold
+4. Calibrating the Cameraâs Brightness Threshold
 
 The camera detects the rover by finding the brightest pixel. To calibrate it:
 Steps:
@@ -113,9 +113,9 @@ Steps:
 
     Test Detection:
 
-        Move the rover around and verify that the camera consistently detects the brightest pixel as the rover’s position.
+        Move the rover around and verify that the camera consistently detects the brightest pixel as the roverâs position.
 
-        If detection is inconsistent, adjust the camera’s exposure settings or add a filter to the flashlight.
+        If detection is inconsistent, adjust the cameraâs exposure settings or add a filter to the flashlight.
 
 Example:
 python
@@ -126,7 +126,7 @@ camera.set_exposure(0.1)  # Reduce exposure to highlight the flashlight
 
 5. Calibrating the Direction Vector
 
-The direction vector (current_direction) represents the rover’s heading. To calibrate it:
+The direction vector (current_direction) represents the roverâs heading. To calibrate it:
 Steps:
 
     Initial Alignment:
@@ -237,7 +237,7 @@ Summary of Calibration Steps:
 
     Camera Detection: Ensure the flashlight is consistently detected as the brightest pixel.
 
-    Direction Vector: Use displacement to correct the rover’s heading.
+    Direction Vector: Use displacement to correct the roverâs heading.
 
     Position and Angle Tolerances: Adjust tolerances for precise movement and alignment.
 

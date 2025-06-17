@@ -1,3 +1,5 @@
 gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw, width=320, height=240, framerate=15/1, format=YUY2 ! videoconvert ! video/x-raw, format=I420 ! jpegenc quality=10 ! rtpjpegpay ! udpsink host=192.168.0.100 port=5000 sync=false
 
 gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw, width=1280, height=720, framerate=5/1, format=YUY2 ! videoconvert ! video/x-raw, format=I420 ! jpegenc quality=50 ! rtpjpegpay ! udpsink host=192.168.0.103 port=5000 sync=false
+
+does this work is so im crazy

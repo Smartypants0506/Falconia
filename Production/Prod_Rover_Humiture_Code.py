@@ -77,7 +77,7 @@ def write_to_csv(data):
     with open(CSV_FILE, "a", newline="") as csvfile:
         writer = csv.writer(csvfile)
         if not file_exists:
-            writer.writerow(["Timestamp", "X", "Y", "Temperature (°C)", "Humidity (%)", "Gas Level"])
+            writer.writerow(["Timestamp", "X", "Y", "Temperature (Â°C)", "Humidity (%)", "Gas Level"])
         writer.writerow(data)
 
 

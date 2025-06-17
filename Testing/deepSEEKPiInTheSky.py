@@ -33,7 +33,7 @@ def get_absolute_angle(x1, y1, x2, y2):
     """Returns the absolute angle (0 to 360 degrees) of the vector from (x1, y1) to (x2, y2)."""
     dx = x2 - x1
     dy = y2 - y1
-    angle = math.atan2(dy, dx)  # Angle in radians (-π to π)
+    angle = math.atan2(dy, dx)  # Angle in radians (-Ï to Ï)
     angle_degrees = math.degrees(angle)  # Convert to degrees
 
     # Convert negative angles to [0, 360] range
